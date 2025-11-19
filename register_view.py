@@ -1,6 +1,7 @@
 import tkinter as tk
 from tkinter import messagebox
 from database import db
+from constants import INTEREST_TAGS
 
 
 class RegisterPage(tk.Frame):
@@ -31,18 +32,20 @@ class RegisterPage(tk.Frame):
         tk.Label(self, text="Select Interests (for event recommendations):", font=("Arial", 10, "bold")).pack(
             pady=(20, 5))
 
-        self.var_free_food = tk.IntVar()
-        self.var_academic = tk.IntVar()
-        self.var_sports = tk.IntVar()
-        self.var_social = tk.IntVar()
-
         chk_frame = tk.Frame(self)
         chk_frame.pack()
 
-        tk.Checkbutton(chk_frame, text="Free Food", variable=self.var_free_food).grid(row=0, column=0, padx=10)
-        tk.Checkbutton(chk_frame, text="Academic", variable=self.var_academic).grid(row=0, column=1, padx=10)
-        tk.Checkbutton(chk_frame, text="Clubs/Sports", variable=self.var_sports).grid(row=1, column=0, padx=10)
-        tk.Checkbutton(chk_frame, text="Social", variable=self.var_social).grid(row=1, column=1, padx=10)
+        self.interest_vars = []
+
+        for i, tag in enumerate(INTEREST_TAGS):
+            var = tk.IntVar()
+            self.interest_vars.append((tag, var))
+            chk = tk.Checkbutton(chk_frame, text=tag, variable=var)
+
+            # 2-column layout for registration form:
+            col = i % 2
+            row = i // 2
+            chk.grid(row=row, column=col, sticky="w", padx=10)
 
         # Buttons
         tk.Button(self, text="Sign Up", command=self.register_user, width=15, bg="#4CAF50", fg="white").pack(pady=20)
@@ -54,19 +57,16 @@ class RegisterPage(tk.Frame):
         password = self.pass_entry.get()
 
         interests = []
-        if self.var_free_food.get(): interests.append("Free Food")
-        if self.var_academic.get(): interests.append("Academic")
-        if self.var_sports.get(): interests.append("Clubs/Sports")
-        if self.var_social.get(): interests.append("Social")
+        for tag, var in self.interest_vars:
+            if var.get() == 1:
+                interests.append(tag)
 
-        # Convert list to a comma-separated string for easy storage
-        interests_str = ",".join(interests)
-
+        # interests passed as a list of strings
         if name and email and password:
-            success = db.register_user(name, email, password, interests_str)
+            success = db.register_user(name, email, password, interests)
 
             if success:
-                messagebox.showinfo("Success", f"Account created for {name}! Interests saved.")
+                messagebox.showinfo("Success", f"Account created for {name}!")
                 self.controller.show_frame("LoginPage")
             else:
                 messagebox.showerror("Error", "Registration failed. Email may already be in use.")

@@ -38,11 +38,11 @@ class LoginPage(tk.Frame):
 
         # Check validation
         if email and password:
-            user_name = db.check_credentials(email, password)
+            user_email = db.check_credentials(email, password)
 
-            if user_name:
-                messagebox.showinfo("Login Success", f"Welcome back, {user_name}!")
-                self.controller.show_frame("CalendarPage")
+            if user_email:
+                messagebox.showinfo("Login Success", f"Welcome back, {email}!")
+                self.controller.login_success(user_email)
             else:
                 messagebox.showerror("Login Failed", "Invalid email or password.")
         else:

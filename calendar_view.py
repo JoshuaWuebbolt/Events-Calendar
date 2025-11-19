@@ -1,6 +1,6 @@
 import tkinter as tk
 from tkinter import messagebox
-
+from constants import INTEREST_TAGS, CLUB_OPTIONS
 
 class CalendarPage(tk.Frame):
     def __init__(self, parent, controller):
@@ -21,7 +21,18 @@ class CalendarPage(tk.Frame):
         nav.pack_propagate(False)
 
         tk.Label(nav, text="UTM Events Calendar", fg="white", bg="#333", font=("Arial", 14)).pack(side="left", padx=15)
+
+        # Log Out button
         tk.Button(nav, text="Log Out", command=lambda: controller.show_frame("LoginPage")).pack(side="right", padx=15)
+
+        # Account button
+        tk.Button(nav, text="👤 Account", command=lambda: controller.show_frame("AccountPage")).pack(side="right",
+                                                                                                    padx=15)
+
+        # Event Creation Button in nav frame
+        tk.Button(nav,
+                  text="➕ Post New Event", command=lambda: controller.show_frame("EventCreationPage"),
+                  bg="#00AA00", fg="white").pack(side="right", padx=15)
 
         # Sidebar (Filters)
         sidebar = tk.Frame(self, width=250, bg="#f5f5f5", relief="groove", bd=1)
@@ -33,13 +44,7 @@ class CalendarPage(tk.Frame):
         # Tags/Interests Filter (Checkboxes)
         tk.Label(sidebar, text="Filter by Tags (e.g., free food):", bg="#f5f5f5").pack(pady=(5, 2), padx=10, anchor="w")
 
-        tag_options = [
-            "Free Food",
-            "Registration Required",
-            "Paid Event",
-            "Academic",
-            "Social",
-        ]
+        tag_options = INTEREST_TAGS
 
         tag_frame = tk.Frame(sidebar, bg="#f5f5f5")
         tag_frame.pack(padx=10, fill="x")
@@ -54,13 +59,7 @@ class CalendarPage(tk.Frame):
         # Club/Host Filter (Checkboxes)
         tk.Label(sidebar, text="Filter by Club:", bg="#f5f5f5").pack(pady=(15, 2), padx=10, anchor="w")
 
-        club_options = [
-            "Robotics Club",
-            "CSSA",
-            "UTMSU",
-            "ICCIT Council",
-            "UTM MCSS",
-        ]
+        club_options = CLUB_OPTIONS
 
         club_frame = tk.Frame(sidebar, bg="#f5f5f5")
         club_frame.pack(padx=10, fill="x")

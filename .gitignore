@@ -1,0 +1,26 @@
+# Byte-code and compiled files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# IDE and Editor files
+.vscode/
+.idea/
+.history/
+*.sublime-workspace
+*.sublime-project
+*.tmproj
+
+# Virtual environment files
+venv/
+env/
+/bin/
+/lib/
+/include/
+
+# SQLite database file
+events.db
+
+# Logs and temporary files
+*.log
+*.tmp
