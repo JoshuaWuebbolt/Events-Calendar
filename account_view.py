@@ -82,14 +82,14 @@ class AccountPage(tk.Frame):
         if user_data:
             name, user_email, interests_list = user_data
 
-            # 1. Update Name/Email fields
+            # Update Name/Email fields
             self.name_entry.delete(0, tk.END)
             self.name_entry.insert(0, name)
             self.email_entry.delete(0, tk.END)
             self.email_entry.insert(0, user_email)
             self.current_user_email_id = user_email  # Store original email for updates/deletes
 
-            # 2. Set Checkbox States based on the database list
+            # Set Checkbox States based on the database list
             active_interests = set(interests_list)
             for tag, var in self.interest_vars:
                 if tag in active_interests:
