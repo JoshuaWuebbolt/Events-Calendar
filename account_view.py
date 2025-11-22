@@ -9,6 +9,7 @@ class AccountPage(tk.Frame):
         self.controller = controller
 
         self.columnconfigure(0, weight=1)
+        self.current_user_email_id = None
 
         self.interest_vars = []
         self.all_interest_tags = INTEREST_TAGS
@@ -116,7 +117,7 @@ class AccountPage(tk.Frame):
         messagebox.showinfo("Update Pending",
                             "Database update logic for interests needs finalization.")
 
-        result = db.update_user_profile(old_email, new_name, new_email, ", ".join(new_interests))
+        result = db.update_user_profile(old_email, new_name, new_email, new_interests)
 
         if result is True:
             # If email changed, update the app's state

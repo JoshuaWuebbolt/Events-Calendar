@@ -5,6 +5,10 @@ INTEREST_TAGS = [
     "Paid Event",
     "Academic",
     "Social",
+    "Sports",
+    "Gaming",
+    "Career",
+    "Art & Craft"
 ]
 
 # Used for event creation and event filtering.
@@ -15,4 +19,6 @@ CLUB_OPTIONS = [
     "ICCIT Council",
     "UTM MCSS",
     "FUSS",
+    "UTM Esport Club",
+    "UofT Hoyo"
 ]

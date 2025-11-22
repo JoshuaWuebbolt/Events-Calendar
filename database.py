@@ -28,14 +28,20 @@ class DBManager:
                                           host_club TEXT NOT NULL,
                                           description TEXT,
                                           time_frame TEXT,
-                                          free_food INTEGER, -- 1 for True, 0 for False
-                                          paid INTEGER  -- 1 for True, 0 for False
+                                          location TEXT
                                       ); """
 
-        sql_create_interests_table = """ CREATE TABLE IF NOT EXISTS interests ( 
+        sql_create_event_interests_table = """ CREATE TABLE IF NOT EXISTS event_interests ( 
+                                            event_id INTEGER, 
+                                            interest_tag TEXT  NOT NULL, 
+                                            FOREIGN  KEY (event_id) REFERENCES events (id) ON DELETE CASCADE,
+                                            PRIMARY KEY (event_id,interest_tag)
+                                            ); """
+
+        sql_create_user_interests_table = """ CREATE TABLE IF NOT EXISTS user_interests ( 
                                             user_email TEXT, 
                                             interest_tag TEXT  NOT NULL, 
-                                            FOREIGN  KEY ( user_email ) REFERENCES users (email) ON DELETE CASCADE,
+                                            FOREIGN  KEY (user_email) REFERENCES users (email) ON DELETE CASCADE,
                                             PRIMARY KEY (user_email,interest_tag)
                                             ); """
 
@@ -43,7 +49,8 @@ class DBManager:
             c = self.conn.cursor()
             c.execute(sql_create_users_table)
             c.execute(sql_create_events_table)
-            c.execute(sql_create_interests_table)
+            c.execute(sql_create_event_interests_table)
+            c.execute(sql_create_user_interests_table)
             self.conn.commit()
         except Error as e:
             print(e)
@@ -53,7 +60,7 @@ class DBManager:
         sql_user = ''' INSERT INTO users(name, email, password) VALUES (?, ?, ?) '''
         try:
             c = self.conn.cursor()
-            c.execute(sql_user, (name, email, password, interests))
+            c.execute(sql_user, (name, email, password))
 
             # insert interests
             sql_interest = ''' INSERT INTO user_interests(user_email, interest_tag) VALUES (?, ?) '''
@@ -151,19 +158,65 @@ class DBManager:
             print(e)
             return False
 
-    def create_event(self, name, club, description, time, location, reg_req, free_food, paid):
+    def create_event(self, name, club, description, time, location, tags_list):
         """Inserts a new event listing into the database."""
         sql = ''' INSERT INTO events(event_name, host_club, description, time_frame, 
-                                     location, free_food, paid)
-                  VALUES(?,?,?,?,?,?,?) '''
+                                     location)
+                  VALUES(?,?,?,?,?) '''
+
+        sql_tag = '''INSERT INTO event_interests(event_id, interest_tag) VALUES(?, ?) '''
         try:
             c = self.conn.cursor()
-            # location and time_frame are TEXT, and free_food/paid are INTEGER (1 or 0)
-            c.execute(sql, (name, club, description, time, location, free_food, paid))
+            c.execute(sql, (name, club, description, time, location))
+
+            new_event_id = c.lastrowid
+            for tag in tags_list:
+                c.execute(sql_tag, (new_event_id, tag))
+
             self.conn.commit()
             return True
         except Error as e:
             print(f"Error creating event: {e}")
             return False
+
+    def get_all_events(self):
+        """
+        Retrieves all events and their associated tags from the database.
+        Returns a list of dictionaries.
+        """
+        sql_events = "SELECT * FROM events"
+        sql_tags = "SELECT interest_tag FROM event_interests WHERE event_id = ?"
+
+        events_list = []
+        try:
+            c = self.conn.cursor()
+            c.execute(sql_events)
+            rows = c.fetchall()
+
+            # Convert raw tuple rows into a list of dictionaries
+            for row in rows:
+                event_id = row[0]
+
+                # Fetch tags for this specific event
+                c_tag = self.conn.cursor()
+                c_tag.execute(sql_tags, (event_id,))
+                tags = [t[0] for t in c_tag.fetchall()]
+
+                event_dict = {
+                    "id": row[0],
+                    "name": row[1],
+                    "club": row[2],
+                    "description": row[3],
+                    "time": row[4],
+                    "location": row[5],
+                    "tags": tags  # Add the list of tags to the dictionary
+                }
+                events_list.append(event_dict)
+
+            return events_list
+
+        except Error as e:
+            print(e)
+            return []
 
 db = DBManager()
