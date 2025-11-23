@@ -219,4 +219,91 @@ class DBManager:
             print(e)
             return []
 
+    def get_events_name_by_user_email(self, email: str):
+        """
+        Need to fully impliment clubs. Once they are this method will only return the events run by clubs that they user is a part of
+
+        Retrieves the names of all events associated with a given email
+        Returns a list of event names
+        """
+
+        try:
+            c = self.conn.cursor()
+            # This line will be changed so don't bother making it a variable
+            c.execute("""
+                SELECT event_name
+                FROM events            
+            """)
+            rows = c.fetchall()
+
+            # convert list of 1-tuples to a list of plain strings
+            rows = [str(row[0]) for row in rows]
+            # print(f'rows: {rows}')
+
+            return rows
+        except Error as e:
+            print(e)
+            return []
+        
+    def get_event_data_by_event_name(self, event_name: str):
+        sql_event = ''' SELECT event_name, host_club, description, time_frame, location, id FROM events WHERE event_name = ? '''
+
+
+        try:
+            c = self.conn.cursor()
+            # This line will be changed so don't bother making it a variable
+            c.execute(sql_event, (event_name,))
+            event = c.fetchone()
+            print(f'The selected event data for {event_name}: {event}')
+
+            return event
+        except Error as e:
+            print(e)
+            return []
+        
+    def get_tags_by_event_id(self, event_id: str):
+        sql_tags = ''' SELECT interest_tag FROM event_interests WHERE event_id = ? '''
+        # Fetch all tags for the given event_id and return as a list of strings
+        try:
+            c = self.conn.cursor()
+            c.execute(sql_tags, (event_id,))
+            tags = [row[0] for row in c.fetchall()]
+            print(f'The selected tag data for {event_id}: {tags}')
+            return tags
+        except Error as e:
+            print(e)
+            return []
+
+    def update_event(self, id, event_name, host_club, description, time, location, tags):
+        """Update an existing event and its associated tags."""
+        sql_update_event = ''' UPDATE events
+                       SET event_name = ?,
+                       host_club = ?,
+                       description = ?,
+                       time_frame = ?,
+                       location = ?
+                       WHERE id = ? '''
+        sql_delete_tags = ''' DELETE FROM event_interests WHERE event_id = ? '''
+        sql_insert_tag = ''' INSERT INTO event_interests(event_id, interest_tag) VALUES(?, ?) '''
+
+        try:
+            c = self.conn.cursor()
+            # Update event row
+            c.execute(sql_update_event, (event_name, host_club, description, time, location, id))
+
+            # Replace tags: remove old ones, then insert new ones
+            c.execute(sql_delete_tags, (id,))
+            if tags:
+                for tag in tags:
+                    c.execute(sql_insert_tag, (id, tag))
+
+            self.conn.commit()
+            return True
+        except sqlite3.IntegrityError:
+            self.conn.rollback()
+            return False
+        except Error as e:
+            print(e)
+            return False
+        
 db = DBManager()

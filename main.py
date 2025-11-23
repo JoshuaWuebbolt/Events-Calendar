@@ -4,7 +4,9 @@ from login_view import LoginPage
 from register_view import RegisterPage
 from calendar_view import CalendarPage
 from event_creation import EventCreationPage
+from event_update import EventUpdatePage
 from account_view import AccountPage
+from event_update_select import EventUpdateSelectionPage
 
 
 class EventsCalendarApp(tk.Tk):
@@ -23,10 +25,11 @@ class EventsCalendarApp(tk.Tk):
         self.container.grid_columnconfigure(0, weight=1)
 
         self.current_user_email = None
+        self.selected_event = None
         self.frames = {}
 
         # Loop through view screens
-        for F in (LoginPage, RegisterPage, CalendarPage, EventCreationPage, AccountPage):
+        for F in (LoginPage, RegisterPage, CalendarPage, EventCreationPage, EventUpdatePage, EventUpdateSelectionPage, AccountPage):
             page_name = F.__name__
             frame = F(parent=self.container, controller=self)
             self.frames[page_name] = frame
