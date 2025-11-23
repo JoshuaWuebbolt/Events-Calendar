@@ -2,7 +2,7 @@ import tkinter as tk
 from tkinter import messagebox
 from database import db
 from constants import INTEREST_TAGS
-
+import bcrypt
 
 class RegisterPage(tk.Frame):
     def __init__(self, parent, controller):
@@ -54,7 +54,12 @@ class RegisterPage(tk.Frame):
     def register_user(self):
         name = self.name_entry.get()
         email = self.email_entry.get()
+
+        # encrypt password
+        s = bcrypt.gensalt()
         password = self.pass_entry.get()
+        hashed_password = bcrypt.hashpw(password.encode("utf-8"), s)
+        password = hashed_password
 
         interests = []
         for tag, var in self.interest_vars:

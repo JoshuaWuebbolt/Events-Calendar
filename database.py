@@ -1,5 +1,6 @@
 import sqlite3
 from sqlite3 import Error
+import bcrypt
 
 
 class DBManager:
@@ -77,15 +78,20 @@ class DBManager:
             return False
 
     def check_credentials(self, email, password):
-        """Checks if the email and password combination is valid."""
-        sql = ''' SELECT name FROM users WHERE email = ? AND password = ? '''
+        """Checks if the email and password combination is valid using bcrypt."""
+        sql = ''' SELECT name, password FROM users WHERE email = ? '''
         try:
             c = self.conn.cursor()
-            c.execute(sql, (email, password))
-            # Fetch one result (the user's name)
-            user_data = c.fetchone()
-            if user_data:
-                return user_data[0]  # Return the user's email
+            c.execute(sql, (email,))
+            row = c.fetchone()
+            if not row:
+                return None
+
+            name, stored_hash = row[0], row[1]
+
+            # Compare provided password with the stored bcrypt hash
+            if bcrypt.checkpw(password.encode('utf-8'), stored_hash):
+                return name
             return None
         except Error as e:
             print(e)
