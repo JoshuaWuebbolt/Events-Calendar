@@ -17,19 +17,6 @@ class EventUpdatePage(tk.Frame):
         # Event names
         self.event_names = db.get_events_name_by_user_email(self.controller.current_user_email)
 
-        # Selected Event Details
-        # self.club_var = ""
-        # self.description_text = ""
-        # self.date_picker = ""
-        # self.location_entry = ""
-        # self.start_hour = ""
-        # self.start_min = ""
-        # self.start_ampm = ""
-        # self.end_hour = ""
-        # self.end_min = ""
-        # self.end_ampm = ""
-        # self.tag_vars = ""
-
         tk.Label(self, text="Select an Event to Update", font=("Arial", 18, "bold")).pack(pady=20)
 
         self.update(parent, controller)

@@ -190,7 +190,7 @@ class DBManager:
         Retrieves all events and their associated tags from the database.
         Returns a list of dictionaries.
         """
-        sql_events = "SELECT * FROM events"
+        sql_events = "SELECT * FROM events ORDER BY time_frame"
         sql_tags = "SELECT interest_tag FROM event_interests WHERE event_id = ?"
 
         events_list = []

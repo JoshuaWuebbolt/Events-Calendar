@@ -13,7 +13,7 @@ class EventsCalendarApp(tk.Tk):
     def __init__(self):
         super().__init__()
         self.title("UTM Events Calendar")
-        self.geometry("800x600")
+        self.geometry("1000x600")
 
         self.grid_rowconfigure(0, weight=1)
         self.grid_columnconfigure(0, weight=1)
