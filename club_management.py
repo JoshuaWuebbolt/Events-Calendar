@@ -69,11 +69,22 @@ class ClubManagement(tk.Frame):
     def update_clubs(self):
         selected_clubs = [club for club, var in self.club_vars if var.get() == 1]
 
-        success = db.update_user_clubs(self.controller.current_user_email, selected_clubs)
+        result = db.update_user_clubs(self.controller.current_user_email, selected_clubs)
 
-        if success:
+        if result is True:
             messagebox.showinfo("Success", f"Club membership updated!")
             self.controller.show_frame("CalendarPage")
+            self.clear_fields()
+
+        # if admin, can't uncheck a club you own
+        elif result == "AdminConstraint":
+            messagebox.showerror("Permission Denied",
+                                 "You cannot uncheck a club you own.\n\n"
+                                 "As an Admin, you must either delete the club entirely "
+                                 "or transfer ownership before leaving.")
+            # Reload the checkboxes so the Admin box gets re-checked visually
+            self.load_and_display_clubs()
+
         else:
             messagebox.showerror("Error", "Could not update clubs.")
 

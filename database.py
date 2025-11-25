@@ -443,7 +443,12 @@ class DBManager:
             to_add = new_clubs_set - current_clubs
             to_remove = current_clubs - new_clubs_set
 
-            # Remove clubs user unchecked (unless you want to prevent admins from leaving?)
+            for club in to_remove:
+                if current_data.get(club) == 'admin':
+                    # Stop everything. Do not delete.
+                    return "AdminConstraint"
+
+            # Remove clubs user 
             for club in to_remove:
                 c.execute("DELETE FROM user_clubs WHERE user_email = ? AND club = ?", (user_email, club))
 
