@@ -206,7 +206,7 @@ class EventUpdatePage(tk.Frame):
         end_time = f"{self.end_hour.get()}:{self.end_min.get()} {self.end_ampm.get()}"
 
         # Combine them into the format: "YYYY-MM-DD | 6:00 PM - 9:00 PM"
-        # This format preserves the Date at the front, so filtering still works!
+        # Preserves the Date at the front so filtering still works
         final_time_string = f"{selected_date} | {start_time} - {end_time}"
 
         selected_tags = [tag for tag, var in self.tag_vars if var.get() == 1]
