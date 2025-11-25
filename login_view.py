@@ -30,12 +30,18 @@ class LoginPage(tk.Frame):
         # # Checkbox
         # tk.Checkbutton(center_frame, text="Stay Logged in:", variable=self.stay_logged_in).pack()
 
-        tk.Button(center_frame, text="Don't have one? Create Account", command=lambda: controller.show_frame("RegisterPage"),
+        tk.Button(center_frame, text="Don't have one? Create Account", command=self.register,
                   relief="flat", bg="#f0f0f0", fg="blue").pack()
         tk.Button(center_frame, text="Exit Application", command=self.controller.quit, width=20, bg="#cc3300",
                   fg="white").pack(pady=10)
-        
 
+    def register(self):
+        self.clear_fields()
+        self.controller.show_frame("RegisterPage")
+
+    def clear_fields(self):
+        self.email_entry.delete(0, tk.END)
+        self.pass_entry.delete(0, tk.END)
 
     def validate_login(self):
         email = self.email_entry.get()
@@ -49,6 +55,9 @@ class LoginPage(tk.Frame):
             if user_email:
                 messagebox.showinfo("Login Success", f"Welcome back, {email}!")
                 self.controller.login_success(user_email)
+
+                # Clear username and password
+                self.clear_fields()
             else:
                 messagebox.showerror("Login Failed", "Invalid email or password.")
         else:
