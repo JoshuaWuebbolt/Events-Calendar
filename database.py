@@ -344,7 +344,6 @@ class DBManager:
             # This line will be changed so don't bother making it a variable
             c.execute(sql_event, (event_name,))
             event = c.fetchone()
-            print(f'The selected event data for {event_name}: {event}')
 
             return event
         except Error as e:
@@ -359,7 +358,6 @@ class DBManager:
             c = self.conn.cursor()
             c.execute(sql_tags, (event_id,))
             tags = [row[0] for row in c.fetchall()]
-            print(f'The selected tag data for {event_id}: {tags}')
             return tags
         except Error as e:
             print(e)
@@ -480,7 +478,6 @@ class DBManager:
     def get_user_clubs(self, email):
         """Gets user clubs for a given email."""
         sql_tags = ''' SELECT club FROM user_clubs WHERE user_email = ? '''
-        print(f'searching with email: {email}')
         try:
             c = self.conn.cursor()
             c.execute(sql_tags, (email,))
@@ -542,7 +539,6 @@ class DBManager:
         """Get events associated with a given email."""
         clubs = self.get_user_clubs(email)
         events = self.get_events_by_clubs(clubs)
-        print(f'event from {email}. clubs: {clubs} and events: {events}')
         return events
 
 
