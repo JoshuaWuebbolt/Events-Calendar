@@ -79,19 +79,8 @@ class CalendarPage(tk.Frame):
         tk.Label(sidebar, text="By Host Club:", bg="#f0f0f0", anchor="w").pack(fill="x", padx=10, pady=(15, 0))
         club_frame = tk.Frame(sidebar, bg="#f0f0f0")
         club_frame.pack(padx=10, fill="x", pady=5)
-
-        # We fetch clubs dynamically
-        clubs = db.get_club_names()
-        if not clubs: clubs = []
-
-        for i, club in enumerate(clubs):
-            var = tk.IntVar()
-            self.club_vars.append((club, var))
-
-            # Math to make it 2 columns
-            r = i // 2
-            c = i % 2
-            tk.Checkbutton(club_frame, text=club, variable=var, bg="#f0f0f0").grid(row=r, column=c, sticky="w")
+        self.club_frame = club_frame
+        self.club_filters(club_frame)
 
         # Buttons
         tk.Button(sidebar, text="Apply Filters", command=self.refresh_events, bg="#003366", fg="white").pack(pady=20)
@@ -120,9 +109,24 @@ class CalendarPage(tk.Frame):
         self.header_label = tk.Label(self.scrollable_frame, text="Upcoming Events", font=("Arial", 16), bg="white")
         self.header_label.pack(pady=10, padx=20, anchor="w")
 
+    def club_filters(self, club_frame):
+        # We fetch clubs dynamically
+        clubs = db.get_club_names()
+        if not clubs: clubs = []
+
+        for i, club in enumerate(clubs):
+            var = tk.IntVar()
+            self.club_vars.append((club, var))
+
+            # Math to make it 2 columns
+            r = i // 2
+            c = i % 2
+            tk.Checkbutton(club_frame, text=club, variable=var, bg="#f0f0f0").grid(row=r, column=c, sticky="w")
+
     def on_show(self):
         """Called whenever the view is shown."""
         self.refresh_events()
+        self.club_filters(self.club_frame)
 
     def logout(self):
         self.clear_filters()
