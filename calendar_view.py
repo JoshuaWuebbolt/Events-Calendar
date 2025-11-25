@@ -26,7 +26,8 @@ class CalendarPage(tk.Frame):
         tk.Button(nav, text="Log Out", command=self.logout).pack(side="right", padx=10)
         tk.Button(nav, text="👤 Account", command=lambda: controller.show_frame("AccountPage")).pack(side="right",
                                                                                                     padx=10)
-        tk.Button(nav, text="➕ Update Event", command=lambda: controller.show_frame("EventUpdateSelectionPage"),
+        tk.Button(nav, text="👥Clubs", command=lambda: controller.show_frame("ClubManagement")).pack(side="right", padx=10)
+        tk.Button(nav, text="↺ Update Event", command=lambda: controller.show_frame("EventUpdateSelectionPage"),
                   bg="#1A4FFF", fg="white").pack(side="right", padx=10)
         tk.Button(nav, text="➕ Post Event", command=lambda: controller.show_frame("EventCreationPage"),
                   bg="#00AA00", fg="white").pack(side="right", padx=10)
@@ -69,7 +70,9 @@ class CalendarPage(tk.Frame):
         club_frame = tk.Frame(sidebar, bg="#f0f0f0")
         club_frame.pack(padx=10, fill="x", pady=5)
 
-        for i, club in enumerate(CLUB_OPTIONS):
+        clubs = db.get_club_names()
+
+        for i, club in enumerate(clubs):
             var = tk.IntVar()
             self.club_vars.append((club, var))
 

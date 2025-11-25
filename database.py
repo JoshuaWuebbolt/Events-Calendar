@@ -26,10 +26,11 @@ class DBManager:
         sql_create_events_table = """ CREATE TABLE IF NOT EXISTS events (
                                           id INTEGER PRIMARY KEY,
                                           event_name TEXT NOT NULL,
-                                          host_club TEXT NOT NULL,
+                                          host_club TEXT,
                                           description TEXT,
                                           time_frame TEXT,
-                                          location TEXT
+                                          location TEXT,
+                                          FOREIGN KEY (host_club) REFERENCES clubs (club_name) ON DELETE CASCADE
                                       ); """
 
         sql_create_event_interests_table = """ CREATE TABLE IF NOT EXISTS event_interests ( 
@@ -46,12 +47,27 @@ class DBManager:
                                             PRIMARY KEY (user_email,interest_tag)
                                             ); """
 
+        sql_create_clubs_table = """CREATE TABLE IF NOT EXISTS clubs (
+                                    id INTEGER PRIMARY KEY,
+                                    club_name TEXT UNIQUE NOT NULL,   
+                                    club_email TEXT UNIQUE NOT NULL,   
+                                    club_description TEXT                            
+                                    );"""
+        
+        sql_create_user_clubs_table = """ CREATE TABLE IF NOT EXISTS user_clubs ( 
+                                    user_email TEXT, 
+                                    club TEXT  NOT NULL, 
+                                    FOREIGN  KEY (user_email) REFERENCES users (email) ON DELETE CASCADE,
+                                    PRIMARY KEY (user_email,club)
+                                    ); """
         try:
             c = self.conn.cursor()
+            c.execute(sql_create_clubs_table)
             c.execute(sql_create_users_table)
             c.execute(sql_create_events_table)
             c.execute(sql_create_event_interests_table)
             c.execute(sql_create_user_interests_table)
+            c.execute(sql_create_user_clubs_table)
             self.conn.commit()
         except Error as e:
             print(e)
@@ -184,6 +200,21 @@ class DBManager:
         except Error as e:
             print(f"Error creating event: {e}")
             return False
+        
+    def create_club(self, name, email, description):
+        sql = ''' INSERT INTO clubs(club_name, club_email, club_description)
+            VALUES(?,?,?) '''
+        try:
+            c = self.conn.cursor()
+            c.execute(sql, (name, email, description))
+            self.conn.commit()
+            return True
+        except Error as e:
+            print(f'Error creating event: {name}')
+            return False
+
+
+
 
     def get_all_events(self):
         """
@@ -311,5 +342,102 @@ class DBManager:
         except Error as e:
             print(e)
             return False
+        
+    def get_events_by_user():
+        pass
+
+    def get_club_names(self):
+        sql_events = "SELECT club_name FROM clubs ORDER BY club_name"
+
+        try:
+            c = self.conn.cursor()
+            c.execute(sql_events)
+            rows = c.fetchall()
+            rows = [str(row[0]) for row in rows]
+            return rows
+        except Error as e:
+            print(e)
+            return False
+
+    def update_user_clubs(self, user_email, clubs):
+        """Inserts a new user into the database."""
+        sql_clear_user_clubs = '''DELETE FROM user_clubs WHERE user_email = ?'''
+        sql_insert_user_club = '''INSERT INTO user_clubs(user_email, club) VALUES(?, ?)'''
+
+        try:
+            c = self.conn.cursor()
+            # Remove existing club associations for the user
+            c.execute(sql_clear_user_clubs, (user_email,))
+
+            # Insert new club associations (if any)
+            if clubs:
+                for club in clubs:
+                    c.execute(sql_insert_user_club, (user_email, club))
+
+            self.conn.commit()
+            return True
+        except Error as e:
+            print(e)
+            self.conn.rollback()
+            return False
+        
+    def get_user_clubs(self, email):
+        sql_tags = ''' SELECT club FROM user_clubs WHERE user_email = ? '''
+        print(f'searching with email: {email}')
+        try:
+            c = self.conn.cursor()
+            c.execute(sql_tags, (email,))
+            rows = c.fetchall()
+            clubs = rows
+            return clubs
+        except Error as e:
+            print(e)
+            return []
+        
+    def get_user_id_by_email(self, email):
+        sql_user = ''' SELECT id FROM users WHERE email = ?'''
+
+        try:
+            c = self.conn.cursor()
+            c.execute(sql_user, (email))
+            user_id =  c.fetchall()[0][0]
+            return user_id
+        except Error as e:
+            print(e)
+            return []
+        
+    def get_events_by_clubs(self, clubs):
+        # Return empty list if no clubs provided
+        if not clubs:
+            return []
+
+        # Allow passing a single club as a string
+        if isinstance(clubs, str):
+            clubs = [clubs]
+
+        placeholders = ",".join("?" for _ in clubs)
+        sql_user = f"SELECT event_name FROM events WHERE host_club IN ({placeholders}) ORDER BY time_frame"
+
+        try:
+            c = self.conn.cursor()
+            # ensure clubs is a flat list of strings (convert from [(name,), ...] to [name, ...])
+            if clubs and isinstance(clubs[0], (tuple, list)):
+                clubs = [c[0] for c in clubs]
+            c.execute(sql_user, clubs)
+            rows = c.fetchall()
+            print(f'{clubs} are hosting: {rows}')
+            return [row[0] for row in rows]
+        except Error as e:
+            print(e)
+            return []
+        
+    def get_events_by_user_email(self, email):
+        clubs = self.get_user_clubs(email)
+        events = self.get_events_by_clubs(clubs)
+        print(f'event from {email}. clubs: {clubs} and events: {events}')
+        return events
+
+
+
         
 db = DBManager()

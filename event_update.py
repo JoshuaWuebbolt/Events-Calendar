@@ -15,7 +15,7 @@ class EventUpdatePage(tk.Frame):
         self.columnconfigure(0, weight=1)
 
         # Event names
-        self.event_names = db.get_events_name_by_user_email(self.controller.current_user_email)
+        self.event_names = db.get_events_by_user_email(self.controller.current_user_email)
 
         tk.Label(self, text="Select an Event to Update", font=("Arial", 18, "bold")).pack(pady=20)
 
@@ -30,7 +30,7 @@ class EventUpdatePage(tk.Frame):
             child.destroy()
 
         # Refresh event list for the UI
-        self.event_names = db.get_events_name_by_user_email(self.controller.current_user_email)
+        self.event_names = db.get_events_by_user_email(self.controller.current_user_email)
 
         # Container for the form details
         form_container = tk.Frame(self)
@@ -44,10 +44,17 @@ class EventUpdatePage(tk.Frame):
         self.name_entry.grid(row=0, column=1, sticky="ew", padx=5, pady=5)
 
         # Club
+        clubs = db.get_user_clubs(self.controller.current_user_email)
+        print(f'Clubs: {clubs}')
         tk.Label(form_container, text="Host Club:", anchor="e").grid(row=1, column=0, sticky="ew", padx=5, pady=5)
         self.club_var = tk.StringVar(self)
-        self.club_var.set(CLUB_OPTIONS[0])
-        tk.OptionMenu(form_container, self.club_var, *CLUB_OPTIONS).grid(row=1, column=1, sticky="ew", padx=5, pady=5)
+        if len(clubs) > 1:
+            self.club_var.set(clubs[0])
+            tk.OptionMenu(form_container, self.club_var, *clubs).grid(row=1, column=1, sticky="ew", padx=5, pady=5)
+        else:
+            self.club_var.set("")
+            tk.OptionMenu(form_container, self.club_var, *["error"]).grid(row=1, column=1, sticky="ew", padx=5, pady=5)
+
 
         # Date
         tk.Label(form_container, text="Date:", anchor="e").grid(row=2, column=0, sticky="ew", padx=5, pady=5)
@@ -261,7 +268,6 @@ class EventUpdatePage(tk.Frame):
 
             # Parse tags
             tags = db.get_tags_by_event_id(event_data[5])
-            print(tags)
 
             # Normalize tags into a set of strings, then set each checkbox accordingly
             try:

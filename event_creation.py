@@ -19,6 +19,43 @@ class EventCreationPage(tk.Frame):
         form_container.pack(padx=20, pady=10, fill="x")
         form_container.columnconfigure(0, weight=1)
         form_container.columnconfigure(1, weight=3)
+        self.form_container = form_container
+
+        self.update(form_container)
+
+
+        # Tags
+        tk.Label(self, text="Select Tags & Interests:").pack(anchor='w', padx=20, pady=(10, 0))
+
+        self.tag_vars = []
+        tags_frame = tk.Frame(self)
+        tags_frame.pack(anchor="w", padx=20, pady=5, fill="x")
+
+        # Grid: 3 columns wide
+        columns = 3
+        for i, tag in enumerate(INTEREST_TAGS):
+            var = tk.IntVar()
+            self.tag_vars.append((tag, var))
+
+            # Calculate row and column
+            r = i // columns
+            c = i % columns
+
+            chk = tk.Checkbutton(tags_frame, text=tag, variable=var)
+            chk.grid(row=r, column=c, sticky="w", padx=10, pady=2)
+
+        # Buttons
+        # Packing this last with ample padding ensures it sits at the bottom
+        button_frame = tk.Frame(self)
+        button_frame.pack(pady=20)
+
+        tk.Button(button_frame, text="Post Event", command=self.post_event,
+                  width=15, bg="#0066AA", fg="white", font=("Arial", 10, "bold")).pack(side="left", padx=10)
+
+        tk.Button(button_frame, text="Cancel", command=lambda: controller.show_frame("CalendarPage"),
+                  width=15).pack(side="left", padx=10)
+        
+    def update(self, form_container):
 
         # Event Details
         # Name
@@ -27,10 +64,13 @@ class EventCreationPage(tk.Frame):
         self.name_entry.grid(row=0, column=1, sticky="ew", padx=5, pady=5)
 
         # Club
+        clubs = db.get_user_clubs(self.controller.current_user_email)
+        if len(clubs) < 1:
+            clubs = ["No Club"]
         tk.Label(form_container, text="Host Club:", anchor="e").grid(row=1, column=0, sticky="ew", padx=5, pady=5)
         self.club_var = tk.StringVar(self)
-        self.club_var.set(CLUB_OPTIONS[0])
-        tk.OptionMenu(form_container, self.club_var, *CLUB_OPTIONS).grid(row=1, column=1, sticky="ew", padx=5, pady=5)
+        self.club_var.set(clubs[0])
+        tk.OptionMenu(form_container, self.club_var, *clubs).grid(row=1, column=1, sticky="ew", padx=5, pady=5)
 
         # Date
         tk.Label(form_container, text="Date:", anchor="e").grid(row=2, column=0, sticky="ew", padx=5, pady=5)
@@ -88,36 +128,9 @@ class EventCreationPage(tk.Frame):
         self.description_text = tk.Text(form_container, height=4, width=40)
         self.description_text.grid(row=6, column=1, sticky="ew", padx=5, pady=5)
 
-        # Tags
-        tk.Label(self, text="Select Tags & Interests:").pack(anchor='w', padx=20, pady=(10, 0))
-
-        self.tag_vars = []
-        tags_frame = tk.Frame(self)
-        tags_frame.pack(anchor="w", padx=20, pady=5, fill="x")
-
-        # Grid: 3 columns wide
-        columns = 3
-        for i, tag in enumerate(INTEREST_TAGS):
-            var = tk.IntVar()
-            self.tag_vars.append((tag, var))
-
-            # Calculate row and column
-            r = i // columns
-            c = i % columns
-
-            chk = tk.Checkbutton(tags_frame, text=tag, variable=var)
-            chk.grid(row=r, column=c, sticky="w", padx=10, pady=2)
-
-        # Buttons
-        # Packing this last with ample padding ensures it sits at the bottom
-        button_frame = tk.Frame(self)
-        button_frame.pack(pady=20)
-
-        tk.Button(button_frame, text="Post Event", command=self.post_event,
-                  width=15, bg="#0066AA", fg="white", font=("Arial", 10, "bold")).pack(side="left", padx=10)
-
-        tk.Button(button_frame, text="Cancel", command=lambda: controller.show_frame("CalendarPage"),
-                  width=15).pack(side="left", padx=10)
+    def on_show(self):
+        """Called by the controller when this page is displayed."""
+        self.update(self.form_container)
 
     def post_event(self):
         name = self.name_entry.get()

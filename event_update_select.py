@@ -29,7 +29,8 @@ class EventUpdateSelectionPage(tk.Frame):
             child.destroy()
 
         # Refresh event list for the UI
-        self.event_names = db.get_events_name_by_user_email(self.controller.current_user_email)
+        self.event_names = db.get_events_by_user_email(self.controller.current_user_email)
+        print(f'event names: {self.event_names}')
         # print(f'Event names: {self.event_names}')
 
         # Container for the form details
@@ -41,9 +42,10 @@ class EventUpdateSelectionPage(tk.Frame):
         # Event Name
         tk.Label(form_container, text="Event Name:", anchor="e").grid(row=0, column=0, sticky="ew", padx=5, pady=5)
         self.name_entry = tk.StringVar(self)
-        self.name_entry.set("")
-        tk.OptionMenu(form_container, self.name_entry, *self.event_names).grid(row=0, column=1, sticky="ew", padx=5, pady=5)
-
+        if(len(self.event_names) > 0):
+            self.name_entry.set("")
+            tk.OptionMenu(form_container, self.name_entry, *self.event_names).grid(row=0, column=1, sticky="ew", padx=5, pady=5)
+        
 
         # Buttons
         # Packing this last with ample padding ensures it sits at the bottom
@@ -64,5 +66,4 @@ class EventUpdateSelectionPage(tk.Frame):
         """Called by the controller when this page is displayed."""
 
         # Update events
-        # Use the actual parent widget (self.master) instead of the bound method object
         self.update(self.master, self.controller)
