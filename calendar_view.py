@@ -1,7 +1,7 @@
 import tkinter as tk
 from tkinter import ttk, messagebox
 from database import db
-from constants import INTEREST_TAGS, CLUB_OPTIONS
+from constants import INTEREST_TAGS
 from tkcalendar import DateEntry
 from datetime import datetime, date
 

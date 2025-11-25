@@ -10,15 +10,3 @@ INTEREST_TAGS = [
     "Career",
     "Art & Craft"
 ]
-
-# Used for event creation and event filtering.
-CLUB_OPTIONS = [
-    "Robotics Club",
-    "CSSA",
-    "UTMSU",
-    "ICCIT Council",
-    "UTM MCSS",
-    "FUSS",
-    "UTM Esport Club",
-    "UofT Hoyo"
-]
