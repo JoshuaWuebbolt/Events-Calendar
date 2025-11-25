@@ -7,8 +7,9 @@ class DBManager:
     def __init__(self, db_file="events.db"):
         self.conn = None
         try:
-            # Connect to the SQLite database file
             self.conn = sqlite3.connect(db_file)
+            # Enable Foreign Keys enforcement for ON UPDATE CASCADE to work.
+            self.conn.execute("PRAGMA foreign_keys = 1")
             self.create_tables()
             print(f"Database connection successful: {db_file}")
         except Error as e:
@@ -30,7 +31,7 @@ class DBManager:
                                           description TEXT,
                                           time_frame TEXT,
                                           location TEXT,
-                                          FOREIGN KEY (host_club) REFERENCES clubs (club_name) ON DELETE CASCADE
+                                          FOREIGN KEY (host_club) REFERENCES clubs (club_name) ON DELETE CASCADE ON UPDATE CASCADE
                                       ); """
 
         sql_create_event_interests_table = """ CREATE TABLE IF NOT EXISTS event_interests ( 
@@ -43,23 +44,24 @@ class DBManager:
         sql_create_user_interests_table = """ CREATE TABLE IF NOT EXISTS user_interests ( 
                                             user_email TEXT, 
                                             interest_tag TEXT  NOT NULL, 
-                                            FOREIGN  KEY (user_email) REFERENCES users (email) ON DELETE CASCADE,
+                                            FOREIGN  KEY (user_email) REFERENCES users (email) ON DELETE CASCADE ON UPDATE CASCADE,
                                             PRIMARY KEY (user_email,interest_tag)
                                             ); """
 
         sql_create_clubs_table = """CREATE TABLE IF NOT EXISTS clubs (
                                     id INTEGER PRIMARY KEY,
                                     club_name TEXT UNIQUE NOT NULL,   
-                                    club_email TEXT UNIQUE NOT NULL,   
+                                    club_email TEXT NOT NULL,   
                                     club_description TEXT                            
                                     );"""
-        
+
         sql_create_user_clubs_table = """ CREATE TABLE IF NOT EXISTS user_clubs ( 
                                     user_email TEXT, 
                                     club TEXT  NOT NULL, 
-                                    FOREIGN  KEY (user_email) REFERENCES users (email) ON DELETE CASCADE,
+                                    role TEXT DEFAULT 'member',
+                                    FOREIGN  KEY (user_email) REFERENCES users (email) ON DELETE CASCADE ON UPDATE CASCADE, 
                                     PRIMARY KEY (user_email,club)
-                                    ); """
+                                    ); """ # if User changes their email in the 'users' table,  it automatically updates in clubs too.
         try:
             c = self.conn.cursor()
             c.execute(sql_create_clubs_table)
@@ -166,18 +168,57 @@ class DBManager:
             return False
 
     def delete_user_account(self, email):
-        """Deletes a user account and their associated data (e.g., events)."""
-        sql_delete_user = ''' DELETE 
-                              FROM users 
-                              WHERE email = ? '''
-        # TODO: add DELETE FROM events WHERE user_email = ? for removing events from account
+        """
+        Deletes a user account.
+        Logic:
+        1. If user is the LAST Admin -> Delete Club.
+        2. If user is NOT the last Admin but is the Contact Person -> Transfer Contact to another Admin.
+        """
+        sql_delete_user = "DELETE FROM users WHERE email = ?"
+
         try:
             c = self.conn.cursor()
+
+            # Find clubs where this user is an 'admin'
+            c.execute("SELECT club FROM user_clubs WHERE user_email = ? AND role = 'admin'", (email,))
+            admin_clubs = [row[0] for row in c.fetchall()]
+
+            for club_name in admin_clubs:
+                # Count total admins
+                c.execute("SELECT count(*) FROM user_clubs WHERE club = ? AND role = 'admin'", (club_name,))
+                admin_count = c.fetchone()[0]
+
+                if admin_count == 1:
+                    # Case A: User is the LAST/ONLY Admin.
+                    # Delete the entire club (cascades to events).
+                    print(f"User is last admin of {club_name}. Deleting club.")
+                    c.execute("DELETE FROM clubs WHERE club_name = ?", (club_name,))
+
+                else:
+                    # Case B: There are other admins remaining.
+                    # Check if the deleting user is the registered 'club_email'
+                    c.execute("SELECT club_email FROM clubs WHERE club_name = ?", (club_name,))
+                    current_club_email = c.fetchone()[0]
+
+                    if current_club_email == email:
+                        # The contact person is leaving so transfer this responsibility
+                        # Find another admin
+                        c.execute(
+                            "SELECT user_email FROM user_clubs WHERE club = ? AND role = 'admin' AND user_email != ?",
+                            (club_name, email))
+                        new_admin_email = c.fetchone()[0]
+
+                        print(f"Transferring ownership of {club_name} to {new_admin_email}")
+                        c.execute("UPDATE clubs SET club_email = ? WHERE club_name = ?", (new_admin_email, club_name))
+
+            # Finally delete the user account
             c.execute(sql_delete_user, (email,))
+
             self.conn.commit()
             return True
         except Error as e:
-            print(e)
+            print(f"Error deleting account: {e}")
+            self.conn.rollback()
             return False
 
     def create_event(self, name, club, description, time, location, tags_list):
@@ -200,17 +241,27 @@ class DBManager:
         except Error as e:
             print(f"Error creating event: {e}")
             return False
-        
-    def create_club(self, name, email, description):
-        sql = ''' INSERT INTO clubs(club_name, club_email, club_description)
-            VALUES(?,?,?) '''
+
+    def create_club(self, name, email, description, creator_email):
+        sql_club = ''' INSERT INTO clubs(club_name, club_email, club_description) \
+                       VALUES (?, ?, ?) '''
+
+        # Automatically make the creator an ADMIN
+        sql_admin = ''' INSERT INTO user_clubs(user_email, club, role) \
+                        VALUES (?, ?, 'admin') '''
+
         try:
             c = self.conn.cursor()
-            c.execute(sql, (name, email, description))
+            # Create Club
+            c.execute(sql_club, (name, email, description))
+            # Assign Creator as Admin
+            c.execute(sql_admin, (creator_email, name))
+
             self.conn.commit()
             return True
         except Error as e:
-            print(f'Error creating event: {name}')
+            print(f'Error creating club: {e}')
+            self.conn.rollback()
             return False
 
 
@@ -263,25 +314,27 @@ class DBManager:
         Retrieves the names of all events associated with a given email
         Returns a list of event names
         """
+        # get the clubs user is in
+        clubs = self.get_user_clubs(email)
+
+        if not clubs:
+            return []
+
+        # find events hosted by these clubs
+        placeholders = ",".join("?" for _ in clubs)
+        sql = f"SELECT event_name FROM events WHERE host_club IN ({placeholders})"
 
         try:
             c = self.conn.cursor()
-            # This line will be changed so don't bother making it a variable
-            c.execute("""
-                SELECT event_name
-                FROM events            
-            """)
+            c.execute(sql, clubs)
             rows = c.fetchall()
 
-            # convert list of 1-tuples to a list of plain strings
-            rows = [str(row[0]) for row in rows]
-            # print(f'rows: {rows}')
-
-            return rows
+            # Flatten to list of strings
+            return [str(row[0]) for row in rows]
         except Error as e:
             print(e)
             return []
-        
+
     def get_event_data_by_event_name(self, event_name: str):
         sql_event = ''' SELECT event_name, host_club, description, time_frame, location, id FROM events WHERE event_name = ? '''
 
@@ -297,8 +350,9 @@ class DBManager:
         except Error as e:
             print(e)
             return []
-        
+
     def get_tags_by_event_id(self, event_id: str):
+        """Get all tags associated with a given event id"""
         sql_tags = ''' SELECT interest_tag FROM event_interests WHERE event_id = ? '''
         # Fetch all tags for the given event_id and return as a list of strings
         try:
@@ -342,11 +396,24 @@ class DBManager:
         except Error as e:
             print(e)
             return False
-        
-    def get_events_by_user():
+
+    def delete_event(self, event_id):
+        """Deletes an event by ID."""
+        sql = "DELETE FROM events WHERE id = ?"
+        try:
+            c = self.conn.cursor()
+            c.execute(sql, (event_id,))
+            self.conn.commit()
+            return True
+        except Error as e:
+            print(f"Error deleting event: {e}")
+            return False
+
+    def get_events_by_user(self):
         pass
 
     def get_club_names(self):
+        """Get a list of all club names."""
         sql_events = "SELECT club_name FROM clubs ORDER BY club_name"
 
         try:
@@ -359,20 +426,30 @@ class DBManager:
             print(e)
             return False
 
-    def update_user_clubs(self, user_email, clubs):
-        """Inserts a new user into the database."""
-        sql_clear_user_clubs = '''DELETE FROM user_clubs WHERE user_email = ?'''
-        sql_insert_user_club = '''INSERT INTO user_clubs(user_email, club) VALUES(?, ?)'''
-
+    def update_user_clubs(self, user_email, new_club_list):
+        """
+        Updates user club memberships but PRESERVES existing roles (like 'admin').
+        """
         try:
             c = self.conn.cursor()
-            # Remove existing club associations for the user
-            c.execute(sql_clear_user_clubs, (user_email,))
 
-            # Insert new club associations (if any)
-            if clubs:
-                for club in clubs:
-                    c.execute(sql_insert_user_club, (user_email, club))
+            # Get current clubs and roles: {'Robotics': 'admin', 'Chess': 'member'}
+            c.execute("SELECT club, role FROM user_clubs WHERE user_email = ?", (user_email,))
+            current_data = {row[0]: row[1] for row in c.fetchall()}
+            current_clubs = set(current_data.keys())
+            new_clubs_set = set(new_club_list)
+
+            # Calculate what to add and what to remove
+            to_add = new_clubs_set - current_clubs
+            to_remove = current_clubs - new_clubs_set
+
+            # Remove clubs user unchecked (unless you want to prevent admins from leaving?)
+            for club in to_remove:
+                c.execute("DELETE FROM user_clubs WHERE user_email = ? AND club = ?", (user_email, club))
+
+            # Add new clubs (default to 'member')
+            for club in to_add:
+                c.execute("INSERT INTO user_clubs (user_email, club, role) VALUES (?, ?, 'member')", (user_email, club))
 
             self.conn.commit()
             return True
@@ -380,20 +457,35 @@ class DBManager:
             print(e)
             self.conn.rollback()
             return False
-        
+
+    def is_club_admin(self, user_email, club_name):
+        """Checks if the user is an admin of the club."""
+        sql = "SELECT role FROM user_clubs WHERE user_email = ? AND club = ?"
+        try:
+            c = self.conn.cursor()
+            c.execute(sql, (user_email, club_name))
+            result = c.fetchone()
+            if result and result[0] == 'admin':
+                return True
+            return False
+        except Error as e:
+            print(e)
+            return False
+
     def get_user_clubs(self, email):
+        """Gets user clubs for a given email."""
         sql_tags = ''' SELECT club FROM user_clubs WHERE user_email = ? '''
         print(f'searching with email: {email}')
         try:
             c = self.conn.cursor()
             c.execute(sql_tags, (email,))
             rows = c.fetchall()
-            clubs = rows
+            clubs = [row[0] for row in rows] # flatten list of tuples
             return clubs
         except Error as e:
             print(e)
             return []
-        
+
     def get_user_id_by_email(self, email):
         sql_user = ''' SELECT id FROM users WHERE email = ?'''
 
@@ -405,8 +497,9 @@ class DBManager:
         except Error as e:
             print(e)
             return []
-        
+
     def get_events_by_clubs(self, clubs):
+        """Gets events associated with a given club."""
         # Return empty list if no clubs provided
         if not clubs:
             return []
@@ -416,22 +509,32 @@ class DBManager:
             clubs = [clubs]
 
         placeholders = ",".join("?" for _ in clubs)
-        sql_user = f"SELECT event_name FROM events WHERE host_club IN ({placeholders}) ORDER BY time_frame"
+        sql = f"SELECT event_name, time_frame, location, host_club FROM events WHERE host_club IN ({placeholders}) ORDER BY time_frame"
 
         try:
             c = self.conn.cursor()
             # ensure clubs is a flat list of strings (convert from [(name,), ...] to [name, ...])
             if clubs and isinstance(clubs[0], (tuple, list)):
                 clubs = [c[0] for c in clubs]
-            c.execute(sql_user, clubs)
+            c.execute(sql, clubs)
             rows = c.fetchall()
-            print(f'{clubs} are hosting: {rows}')
-            return [row[0] for row in rows]
+
+            # Return a list of dictionaries, not just strings
+            events_data = []
+            for row in rows:
+                events_data.append({
+                    "name": row[0],
+                    "time": row[1],
+                    "location": row[2],
+                    "club": row[3]
+                })
+            return events_data
         except Error as e:
             print(e)
             return []
-        
+
     def get_events_by_user_email(self, email):
+        """Get events associated with a given email."""
         clubs = self.get_user_clubs(email)
         events = self.get_events_by_clubs(clubs)
         print(f'event from {email}. clubs: {clubs} and events: {events}')
@@ -439,5 +542,5 @@ class DBManager:
 
 
 
-        
+
 db = DBManager()
